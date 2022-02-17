@@ -36,7 +36,7 @@ def create_image(imgfile,alpha=1,size=1.0):
 
 
 class tanks:
-    def __init__(self,master,imgfile,x=20,y=20):
+    def __init__(self,master,imgfile,x=20,y=20,hidden=False):
         self.x=x
         self.y=y
         self.speedx = 5
@@ -44,6 +44,8 @@ class tanks:
         self.master=master
         self.img=create_image(imgfile,size=0.5)
         self.shape = master.create_image(self.x,self.y,anchor=tk.NW, image=self.img)
+        if hidden:
+            self.hide()
 
 
     def ball_update(self):
@@ -58,6 +60,15 @@ class tanks:
 
     def delete(self):
         self.master.delete(self.shape)
+
+    def show(self):
+        self.master.itemconfig(self.shape, state='normal')
+
+    def hide(self):
+        self.master.itemconfig(self.shape, state='hidden')
+
+
+
 
 class battle_field(tk.Canvas):
     def __init__(self,master,n_battalions, win):
@@ -103,6 +114,7 @@ class battle_field(tk.Canvas):
         self.button_pluss.grid(column=0,                row=4,sticky=tk.NSEW)
         self.button_minus.grid(column=0,                row=5,sticky=tk.NSEW)
         self.info_player.grid(column=0,                 row=6,sticky=tk.NSEW)
+
         
     def pluss_player(self):
         if self.win.get_battalions_left()==0:
@@ -110,36 +122,35 @@ class battle_field(tk.Canvas):
             return
         self.win.message('')
         self.pluss(self.battalion_objects_player, self.battalion_stand_player,self.info_txt_player)
-        self.win.computer_reaction()
+
 
     def minus_player(self):
         self.win.message('')
         self.minus(self.battalion_objects_player,self.info_txt_player)
-        self.win.computer_reaction()
 
     def set_player(self,n_battalions):
         self.set(n_battalions, self.battalion_objects_player, self.battalion_stand_player,self.info_txt_player)
 
-    def pluss_computer(self):
+    def pluss_computer(self, hidden=False):
         if self.win.get_battalions_left(False)==0:
             return
-        self.pluss(self.battalion_objects_computer, self.battalion_stand_computer,self.info_txt_computer)
+        self.pluss(self.battalion_objects_computer, self.battalion_stand_computer,self.info_txt_computer,hidden)
 
     def minus_computer(self):
         self.minus(self.battalion_objects_computer,self.info_txt_computer)
 
-    def set_computer(self,n_battalions):
-        self.set(n_battalions, self.battalion_objects_computer, self.battalion_stand_computer,self.info_txt_computer)
+    def set_computer(self,n_battalions,hidden=False):
+        self.set(n_battalions, self.battalion_objects_computer, self.battalion_stand_computer,self.info_txt_computer,hidden)
 
-    def set(self,n_battalions,battalions,battalion_stand, info):
+    def set(self,n_battalions,battalions,battalion_stand, info,hidden=False):
         while n_battalions>len(battalions) and self.win.get_battalions_left(False)>0:
-            self.pluss(battalions,battalion_stand,info)
+            self.pluss(battalions,battalion_stand,info,hidden)
         while n_battalions<len(battalions):
             self.minus(battalions,info)
 
 
 
-    def pluss(self,battalions,battalion_stand,info):
+    def pluss(self,battalions,battalion_stand,info,hidden=False):
         CDIST=40
         RDIST=40
         NCOLS=6
@@ -147,7 +158,7 @@ class battle_field(tk.Canvas):
         row=int(len(battalions)/NCOLS)
         x=(len(battalions)-row*NCOLS)*CDIST
         y=10+row*RDIST
-        battalions.append(tanks(battalion_stand,'tanks.png',x,y))
+        battalions.append(tanks(battalion_stand,'tanks.png',x,y,hidden))
         info.set(len(battalions))
         self.win.battalions_left.set(f'Remaining Battalions: {self.win.get_battalions_left()}')
 
@@ -164,7 +175,7 @@ class battle_field(tk.Canvas):
 
 
 class window(tk.Tk):
-    def __init__(self,n_fields,n_battalions, computer_strategy=None):
+    def __init__(self,n_fields,n_battalions,  computer_strategy=None):
         tk.Tk.__init__(self)
         self.title("Blotto")
         self.geometry('%sx%s+%s+%s' %(self.winfo_screenwidth(),self.winfo_screenheight()-75,-5,0))
@@ -177,7 +188,8 @@ class window(tk.Tk):
         else:
             self.computer_strategy=computer_strategy
 
-        
+        self.computer_strategy=computer_strategy
+
         #Defining main areas:
         self.battlefields_canvas=tk.Canvas(self,bg="yellow")
         self.controls=tk.Canvas(self,bg="red")
@@ -205,14 +217,19 @@ class window(tk.Tk):
 
 
     def initiate_game(self):
+        #initiating players battalions:
         for i in self.battlefields:
             i.set_player(self.mean_battalions)
-            i.set_computer(self.mean_battalions)
         rest=self.n_battalions-self.mean_battalions*self.n_fields
         for i in range(rest):
             b=self.battlefields[i]
             b.pluss_player()
-            b.pluss_computer()
+
+        #setting computers battalions
+        battalions=self.computer_strategy(self.n_battalions, self.n_fields)
+        for i in range(len(self.battlefields)):
+            self.battlefields[i].set_computer(battalions[i],True)
+
 
     def configure_layout(self):
         self.rowconfigure(0,weight=1)
@@ -244,14 +261,19 @@ class window(tk.Tk):
         player_battalions, computer_battalions=self.get_battalion_count()
         diff=(player_battalions-computer_battalions)
         points=np.sum(diff>0)-np.sum(diff<0)
+        self.show_computer()
+        self.set_colors()
         if points>0:
-            self.message('You won')
+            self.message(f'YOU WON BY {points} POINTS')
         elif points==0:
             self.message('It was a draw')
         else:
-            self.message('YOU LOST!!!!')
+            self.message(f'YOU LOST BY {points} POINTS')
         
-
+    def show_computer(self):
+        for i in self.battlefields:
+            for j in i.battalion_objects_computer:
+                j.show()
 
     def get_battalions_left(self,player=True):
         b=0
@@ -273,12 +295,9 @@ class window(tk.Tk):
             battalions_computer.append(len(i.battalion_objects_computer))
         return np.array(battalions_player, dtype=int), np.array(battalions_computer, dtype=int)
 
-    def computer_reaction(self):
-        player_battalions, computer_battalions=self.get_battalion_count()
-        computer_battalions=self.computer_strategy(player_battalions,computer_battalions, self.n_battalions, self.n_fields)
-        for i in range(len(self.battlefields)):
-            b=self.battlefields[i]
-            b.set_computer(computer_battalions[i])
+
+    def set_colors(self):
+        for b in self.battlefields:
             diff=len(b.battalion_objects_player)-len(b.battalion_objects_computer)
             if diff>0:
                 b.playing_field['bg']='green'
@@ -291,38 +310,22 @@ class window(tk.Tk):
 
 
 
+def default_computer_strategy(n_battalions,n_fields):
+    #put your code here to change strategy
+    #The function needs to return a vector with as many elements as there are battlefields (n_fields)
+    #The total numner of battalions employed should equal n_battalions
+
+    #random strategy:
+    mean_battalions=int(n_battalions/n_fields)
+    battalions=[np.random.randint(3)+1 for i in range(n_fields)]
+    while True:
+        for i in range(n_fields):
+            if sum(battalions)==n_battalions:
+                return battalions
+            elif sum(battalions)<n_battalions:
+                battalions[i]+=1
+            elif sum(battalions)>n_battalions and battalions[i]>0:
+                battalions[i]-=1
+
+
     
-
-def default_computer_strategy(player_battalions, computer_battalions,n_battalions,n_fields):
-    #you have to make shure yourself that the sum of computer battalions do not 
-    #exceed n_battalions
-
-    for i in range(100):
-        diff=(computer_battalions-player_battalions)
-        won=np.sum(diff>0)-np.sum(diff<0)
-        if won>0:
-            return computer_battalions
-        #obtains the diff ranking
-        s=diff.argsort()
-        #adds battalion where the computer is weakest
-        computer_battalions[s[0]]+=1
-        #reduces battalion by chekcing for positive deployments in reverse order:
-        for i in s[::-1]:
-            #if there are battalions to take and the change is inconsequential, then remove a battalion
-            if (computer_battalions[i]>0 
-                    and 
-                    (computer_battalions[i]<player_battalions[i] or
-                    computer_battalions[i]>player_battalions[i]+1 )
-                    ):
-                computer_battalions[i]-=1
-                break
-    return computer_battalions
-        
-        
-
-
-
-
-w=window(6,21)
-
-w.mainloop()
