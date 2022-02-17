@@ -23,6 +23,6 @@ def computer_strategy(n_battalions,n_fields):
 
     
    
-w=blotto.window(7,21,  computer_strategy)
+w=blotto.window(6,26,  computer_strategy)
 
 w.mainloop()

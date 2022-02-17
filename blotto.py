@@ -95,19 +95,19 @@ class battle_field(tk.Canvas):
 
         #Information about number of battalions for player:
         self.info_txt_player=tk.StringVar(self)
-        self.info_player=tk.Label(self,textvariable=self.info_txt_player,font="Courier 20 bold",justify=tk.LEFT,anchor=tk.W)
+        self.info_player=tk.Label(self,textvariable=self.info_txt_player,font="Courier 20 bold")
         self.info_txt_player.set(0)
 
         #Information about number of battalions for computer:
         self.info_txt_computer=tk.StringVar(self)
-        self.info_computer=tk.Label(self,textvariable=self.info_txt_computer,font="Courier 20 bold",justify=tk.LEFT,anchor=tk.W)
+        self.info_computer=tk.Label(self,textvariable=self.info_txt_computer,font="Courier 20 bold")
         self.info_txt_computer.set(0)
 
         self.columnconfigure(0,weight=1)
         for i,w in [(0,1),(1,1), (2,8), (3,1), (4,1), (5,1),(6,1)]:
             self.rowconfigure(i,weight=w)
 
-        self.info_computer.grid(column=0,               row=0,sticky=tk.NSEW)
+        #self.info_computer.grid(column=0,               row=0,sticky=tk.NSEW)
         self.battalion_stand_computer.grid(column=0,    row=1,sticky=tk.NSEW)
         self.playing_field.grid(column=0,               row=2,sticky=tk.NSEW)
         self.battalion_stand_player.grid(column=0,      row=3,sticky=tk.NSEW)
@@ -170,6 +170,16 @@ class battle_field(tk.Canvas):
         self.info_txt_player.set(len(battalions))
         self.win.battalions_left.set(f'Remaining Battalions: {self.win.get_battalions_left()}')
 
+    def clear(self):
+        self.playing_field['bg']='orange'
+        for i in self.battalion_objects_computer:
+            i.delete()
+        for i in self.battalion_objects_player:
+            i.delete()
+        self.battalion_objects_computer=[]
+        self.battalion_objects_player=[]
+        
+
 
 
 
@@ -194,8 +204,10 @@ class window(tk.Tk):
         self.battlefields_canvas=tk.Canvas(self,bg="yellow")
         self.controls=tk.Canvas(self,bg="red")
 
-        #Defining attack button:
-        self.button_attack=tk.Button(self.controls,command=self.attack, text="Attack",font="Courier 20 bold")
+        #Defining buttons:
+        self.buttons=tk.Canvas(self.controls,bg="red")
+        self.button_attack=tk.Button(self.buttons,command=self.attack, text="Attack",font="Courier 20 bold")
+        self.button_restart=tk.Button(self.buttons,command=self.restart, text="Restart",font="Courier 20 bold")
 
         #Defining information text containers:
         self.output=tk.Canvas(self.controls,bg="blue")
@@ -238,12 +250,18 @@ class window(tk.Tk):
         self.battlefields_canvas.rowconfigure(0,weight=1)
         for i in range(self.n_fields):
             self.battlefields_canvas.columnconfigure(i,weight=1)
+
         self.controls.rowconfigure(0,weight=1)
         self.controls.rowconfigure(1,weight=1)
         self.controls.columnconfigure(0,weight=1)
+
         self.output.rowconfigure(0,weight=1)
         self.output.columnconfigure(0,weight=1)
         self.output.columnconfigure(1,weight=1)
+
+        self.buttons.rowconfigure(0,weight=1)
+        self.buttons.columnconfigure(0,weight=1)
+        self.buttons.columnconfigure(1,weight=1)
 
 
     def grid_all(self):
@@ -251,8 +269,10 @@ class window(tk.Tk):
             self.battlefields[i].grid(column=i,row=0,sticky=tk.NSEW)
         self.battlefields_canvas.grid(row=0,sticky=tk.NSEW)
         self.controls.grid(row=1,column=0,sticky=tk.EW)
-        self.button_attack.grid(row=1,column=0,sticky=tk.EW)
-        self.output.grid(row=2,column=0,sticky=tk.EW)
+        self.buttons.grid(row=0,column=0,sticky=tk.EW)
+        self.button_attack.grid(row=0,column=0,sticky=tk.EW)
+        self.button_restart.grid(row=0,column=1,sticky=tk.EW)
+        self.output.grid(row=1,column=0,sticky=tk.EW)
         self.output_label.grid(row=0,column=1,sticky=tk.EW)
         self.battalions_left_label.grid(row=0,column=0,sticky=tk.EW)
 
@@ -269,6 +289,11 @@ class window(tk.Tk):
             self.message('It was a draw')
         else:
             self.message(f'YOU LOST BY {points} POINTS')
+
+    def restart(self):
+        for i in self.battlefields:
+            i.clear()
+        self.initiate_game()
         
     def show_computer(self):
         for i in self.battlefields:
