@@ -78,6 +78,7 @@ class battle_field(tk.Canvas):
         self.battalion_objects_player=[]
         self.battalion_objects_computer=[]
         self.win=win
+        
 
 
         #Adding fields:
@@ -98,23 +99,19 @@ class battle_field(tk.Canvas):
         self.info_player=tk.Label(self,textvariable=self.info_txt_player,font="Courier 20 bold")
         self.info_txt_player.set(0)
 
-        #Information about number of battalions for computer:
-        self.info_txt_computer=tk.StringVar(self)
-        self.info_computer=tk.Label(self,textvariable=self.info_txt_computer,font="Courier 20 bold")
-        self.info_txt_computer.set(0)
 
         self.columnconfigure(0,weight=1)
-        for i,w in [(0,1),(1,1), (2,8), (3,1), (4,1), (5,1),(6,1)]:
+        for i,w in [(0,1),(1,8), (2,1), (3,1), (4,1), (5,1)]:
             self.rowconfigure(i,weight=w)
 
-        #self.info_computer.grid(column=0,               row=0,sticky=tk.NSEW)
-        self.battalion_stand_computer.grid(column=0,    row=1,sticky=tk.NSEW)
-        self.playing_field.grid(column=0,               row=2,sticky=tk.NSEW)
-        self.battalion_stand_player.grid(column=0,      row=3,sticky=tk.NSEW)
-        self.button_pluss.grid(column=0,                row=4,sticky=tk.NSEW)
-        self.button_minus.grid(column=0,                row=5,sticky=tk.NSEW)
-        self.info_player.grid(column=0,                 row=6,sticky=tk.NSEW)
+        self.battalion_stand_computer.grid(column=0,    row=0,sticky=tk.NSEW)
+        self.playing_field.grid(column=0,               row=1,sticky=tk.NSEW)
+        self.battalion_stand_player.grid(column=0,      row=2,sticky=tk.NSEW)
+        self.button_pluss.grid(column=0,                row=3,sticky=tk.NSEW)
+        self.button_minus.grid(column=0,                row=4,sticky=tk.NSEW)
+        self.info_player.grid(column=0,                 row=5,sticky=tk.NSEW)
 
+        
         
     def pluss_player(self):
         if self.win.get_battalions_left()==0:
@@ -140,9 +137,9 @@ class battle_field(tk.Canvas):
         self.minus(self.battalion_objects_computer,self.info_txt_computer)
 
     def set_computer(self,n_battalions,hidden=False):
-        self.set(n_battalions, self.battalion_objects_computer, self.battalion_stand_computer,self.info_txt_computer,hidden)
+        self.set(n_battalions, self.battalion_objects_computer, self.battalion_stand_computer,hidden=hidden)
 
-    def set(self,n_battalions,battalions,battalion_stand, info,hidden=False):
+    def set(self,n_battalions,battalions,battalion_stand, info=None,hidden=False):
         while n_battalions>len(battalions) and self.win.get_battalions_left(False)>0:
             self.pluss(battalions,battalion_stand,info,hidden)
         while n_battalions<len(battalions):
@@ -159,7 +156,8 @@ class battle_field(tk.Canvas):
         x=(len(battalions)-row*NCOLS)*CDIST
         y=10+row*RDIST
         battalions.append(tanks(battalion_stand,'tanks.png',x,y,hidden))
-        info.set(len(battalions))
+        if not info is None:
+            info.set(len(battalions))
         self.win.battalions_left.set(f'Remaining Battalions: {self.win.get_battalions_left()}')
 
 
@@ -184,8 +182,8 @@ class battle_field(tk.Canvas):
 
 
 
-class window(tk.Tk):
-    def __init__(self,n_fields,n_battalions,  computer_strategy=None):
+class run(tk.Tk):
+    def __init__(self,n_fields,n_battalions,  computer_strategy=None, player_strategy=None):
         tk.Tk.__init__(self)
         self.title("Blotto")
         self.geometry('%sx%s+%s+%s' %(self.winfo_screenwidth(),self.winfo_screenheight()-75,-5,0))
@@ -193,16 +191,22 @@ class window(tk.Tk):
         self.n_battalions=n_battalions
         self.mean_battalions=int(self.n_battalions/n_fields)
         self.battlefields=[]
+        self.iterations=0
+        self.tot_points=0
+
+        #Defining strategies:
         if computer_strategy is None:
             self.computer_strategy=default_computer_strategy
         else:
             self.computer_strategy=computer_strategy
-
-        self.computer_strategy=computer_strategy
+        if player_strategy is None:
+            self.player_strategy=default_player_strategy
+        else:
+            self.player_strategy=player_strategy
 
         #Defining main areas:
-        self.battlefields_canvas=tk.Canvas(self,bg="yellow")
-        self.controls=tk.Canvas(self,bg="red")
+        self.battlefields_canvas=tk.Canvas(self,bg="yellow")#this is the total screen area
+        self.controls=tk.Canvas(self,bg="red")#This is the bottom area wtih buttons and output
 
         #Defining buttons:
         self.buttons=tk.Canvas(self.controls,bg="red")
@@ -210,13 +214,18 @@ class window(tk.Tk):
         self.button_restart=tk.Button(self.buttons,command=self.restart, text="Restart",font="Courier 20 bold")
 
         #Defining information text containers:
+        outputfont="Courier 16 bold"
         self.output=tk.Canvas(self.controls,bg="blue")
         self.output_text=tk.StringVar(self)
-        self.output_label=tk.Label(self.output,textvariable=self.output_text,font="Courier 20 bold",justify=tk.LEFT,anchor=tk.W,width=30)
-        self.battalions_left=tk.StringVar(self)
-        self.battalions_left_label=tk.Label(self.output,textvariable=self.battalions_left,font="Courier 20 bold",justify=tk.LEFT,anchor=tk.W,width=30)
-        self.battalions_left.set(f'Remaining Battalions: {n_battalions}')
+        self.output_label=tk.Label(self.output,textvariable=self.output_text,font=outputfont,justify=tk.LEFT,anchor=tk.W,width=30,bg='light grey')
         self.message('')
+        self.battalions_left=tk.StringVar(self)
+        self.battalions_left_label=tk.Label(self.output,textvariable=self.battalions_left,font=outputfont,justify=tk.LEFT,anchor=tk.W,width=30)
+        self.battalions_left.set(f'Remaining Battalions: {n_battalions}')
+        self.points_txt=tk.StringVar(self)
+        self.points=tk.Label(self.output,textvariable=self.points_txt,font=outputfont,justify=tk.LEFT,anchor=tk.W,width=30)
+        self.points_txt.set(f'Points: 0 \t Total points: 0')
+        
 
         #Defining battlefileds:
         for i in range(n_fields):
@@ -227,20 +236,21 @@ class window(tk.Tk):
         self.grid_all()
         self.initiate_game()
 
+        self.mainloop()
+
 
     def initiate_game(self):
         #initiating players battalions:
-        for i in self.battlefields:
-            i.set_player(self.mean_battalions)
-        rest=self.n_battalions-self.mean_battalions*self.n_fields
-        for i in range(rest):
-            b=self.battlefields[i]
-            b.pluss_player()
+        
+        battalions=self.player_strategy(self.n_battalions, self.n_fields)
+        for i in range(len(self.battlefields)):
+            self.battlefields[i].set_player(battalions[i])
 
         #setting computers battalions
         battalions=self.computer_strategy(self.n_battalions, self.n_fields)
         for i in range(len(self.battlefields)):
             self.battlefields[i].set_computer(battalions[i],True)
+
 
 
     def configure_layout(self):
@@ -258,6 +268,7 @@ class window(tk.Tk):
         self.output.rowconfigure(0,weight=1)
         self.output.columnconfigure(0,weight=1)
         self.output.columnconfigure(1,weight=1)
+        self.output.columnconfigure(2,weight=1)
 
         self.buttons.rowconfigure(0,weight=1)
         self.buttons.columnconfigure(0,weight=1)
@@ -267,14 +278,19 @@ class window(tk.Tk):
     def grid_all(self):
         for i in range(self.n_fields):
             self.battlefields[i].grid(column=i,row=0,sticky=tk.NSEW)
-        self.battlefields_canvas.grid(row=0,sticky=tk.NSEW)
-        self.controls.grid(row=1,column=0,sticky=tk.EW)
-        self.buttons.grid(row=0,column=0,sticky=tk.EW)
-        self.button_attack.grid(row=0,column=0,sticky=tk.EW)
-        self.button_restart.grid(row=0,column=1,sticky=tk.EW)
-        self.output.grid(row=1,column=0,sticky=tk.EW)
-        self.output_label.grid(row=0,column=1,sticky=tk.EW)
-        self.battalions_left_label.grid(row=0,column=0,sticky=tk.EW)
+
+        self.battlefields_canvas.grid(  row=0,  sticky=tk.NSEW)             #master: self
+        self.controls.grid(             row=1,  column=0,sticky=tk.EW)      #master: battlefields_canvas
+
+        self.buttons.grid(  row=0,  column=0,sticky=tk.EW)                  #master: controls
+        self.output.grid(   row=1,  column=0,sticky=tk.EW)                  #master: controls
+
+        self.button_attack.grid( row=0, column=0,   sticky=tk.EW)           #master: buttons
+        self.button_restart.grid(row=0, column=1,   sticky=tk.EW)           #master: buttons
+        
+        self.battalions_left_label.grid(row=0,  column=0,   sticky=tk.EW)   #master: output
+        self.output_label.grid(         row=0,  column=1,   sticky=tk.EW)   #master: output
+        self.points.grid(               row=0,  column=2,   sticky=tk.EW)   #master: output
 
 
     def attack(self):
@@ -288,7 +304,15 @@ class window(tk.Tk):
         elif points==0:
             self.message('It was a draw')
         else:
-            self.message(f'YOU LOST BY {points} POINTS')
+            self.message(f'YOU LOST BY {-points} POINTS')
+        
+        data={'Iteration':self.iterations, 
+                'Points':points
+        }
+
+        self.tot_points+=points
+        self.points_txt.set(f'Points: {points} \t Total points: {self.tot_points}')
+
 
     def restart(self):
         for i in self.battlefields:
@@ -353,4 +377,13 @@ def default_computer_strategy(n_battalions,n_fields):
                 battalions[i]-=1
 
 
+def default_player_strategy(n_battalions,n_fields):
+        mean_battalions=int(n_battalions/n_fields)
+        battalions=np.ones(n_fields,dtype=int)*mean_battalions
+        #assigning the rest to random battlefields:
+        rest=n_battalions-mean_battalions*n_fields
+        rnd_sel=np.random.rand(n_fields).argsort()[:rest]
+        battalions[rnd_sel]+=1
+        assert sum(battalions)==n_battalions
+        return battalions
     

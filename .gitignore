@@ -3,3 +3,6 @@ Thumbs.db
 unused/
 .ipynb_checkpoints/
 __pycache__/
+strategies.py
+challenge.txt
+run.py
