@@ -183,7 +183,7 @@ class battle_field(tk.Canvas):
 
 
 class run(tk.Tk):
-    def __init__(self,n_fields,n_battalions,  computer_strategy=None, player_strategy=None):
+    def __init__(self,n_fields,n_battalions, player_strategy=None, computer_strategy=None):
         tk.Tk.__init__(self)
         self.title("Blotto")
         self.geometry('%sx%s+%s+%s' %(self.winfo_screenwidth(),self.winfo_screenheight()-75,-5,0))
@@ -243,11 +243,13 @@ class run(tk.Tk):
         #initiating players battalions:
         
         battalions=self.player_strategy(self.n_battalions, self.n_fields)
+        assert sum(battalions)==self.n_battalions
         for i in range(len(self.battlefields)):
             self.battlefields[i].set_player(battalions[i])
 
         #setting computers battalions
         battalions=self.computer_strategy(self.n_battalions, self.n_fields)
+        assert sum(battalions)==self.n_battalions
         for i in range(len(self.battlefields)):
             self.battlefields[i].set_computer(battalions[i],True)
 
