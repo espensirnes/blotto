@@ -1,5 +1,4 @@
 import tkinter as tk
-import time
 from tkinter.constants import S
 from PIL import ImageTk, Image
 import numpy as np
