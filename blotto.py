@@ -69,7 +69,7 @@ class Tanks:
 
 
 
-class battle_field(tk.Canvas):
+class BattleField(tk.Canvas):
     def __init__(self,master,n_battalions, win):
         tk.Canvas.__init__(self,master,bg = 'pink')
         self.master = master
@@ -228,7 +228,7 @@ class Run(tk.Tk):
 
         #Defining battlefileds:
         for i in range(n_fields):
-            bf = battle_field(self.battlefields_canvas,n_battalions,self)
+            bf = BattleField(self.battlefields_canvas,n_battalions,self)
             self.battlefields.append(bf)
 
         self.configure_layout()
