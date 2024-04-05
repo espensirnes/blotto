@@ -16,7 +16,7 @@ def create_image(imgfile,alpha = 1,size = 1.0):
     img = Image.open(imgfile)
     if size<1.0:
         s = img.size
-        img = img.resize((int(s[0]*size), int(s[1]*size)), Image.ANTIALIAS)
+        img = img.resize((int(s[0]*size), int(s[1]*size)), Image.LANCZOS)
 
     img  =  img.convert("RGBA")
     datas  =  img.getdata()
